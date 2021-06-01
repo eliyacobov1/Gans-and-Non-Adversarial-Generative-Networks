@@ -20,8 +20,6 @@ device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 
 # Batch size during training
 batch_size = 32
-# Convention for real and fake labels during training
-real_label, fake_label = 1., 0.
 # Size of z latent vector (i.e. size of generator input)
 latent_vec_size = 10
 # Size of feature maps in generator and discriminator
@@ -35,7 +33,7 @@ lr = 0.0002
 # Beta1 hyper-param for Adam optimizers
 beta1 = 0.5
 # the number of steps applied to the discriminator per a single iteration of the generator
-discriminator_iterations = 3
+discriminator_iterations = 1
 
 
 def tensor_to_plt_im(im: torch.Tensor):
@@ -148,7 +146,7 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def train(g_net: nn.Module, d_net: nn.Module, d_net_loss, g_net_loss):
+def train(g_net: nn.Module, d_net: nn.Module, criterion=nn.BCELoss()):
     G_losses, D_losses, iters, gen_lst = [], [], 0, []
     optimizerD = optim.Adam(d_net.parameters(), lr=lr, betas=(beta1, 0.999))
     optimizerG = optim.Adam(g_net.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -157,34 +155,38 @@ def train(g_net: nn.Module, d_net: nn.Module, d_net_loss, g_net_loss):
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         for i, data in enumerate(dataloader, 0):
-            for j in range(discriminator_iterations): # for each generator step, perform several discriminator steps
-                # train discriminator
-                d_net.zero_grad()
-                batch = data[0].to(device)
-                b_size = batch.size(0)
-                # Forward pass real batch through D
-                real_output = d_net(batch).view(-1)
+            # train discriminator
+            d_net.zero_grad()
+            batch = data[0].to(device)
+            b_size = batch.size(0)
+            # Forward pass real batch through D
+            real_output = d_net(batch).view(-1)
+            real_label = torch.ones((b_size,), dtype=torch.float, device=device)
+            errD_real = criterion(real_output, real_label)
+            errD_real.backward()
 
-                # Train with fake batch
-                # Generate batch of latent vectors
-                noise = torch.randn(b_size, latent_vec_size, 1, 1, device=device)
-                # Generate fake image batch with generator
-                fake = g_net(noise)
-                # Classify all fake batch with discriminator
-                fake_output = d_net(fake.detach()).view(-1)
-                # Calculate the gradients for this batch, accumulated (summed) with previous gradients
-                errD = d_net_loss(fake_output, real_output)
-                errD.backward()
-                # Update discriminator
-                optimizerD.step()
+            # Train with fake batch
+            # Generate batch of latent vectors
+            noise = torch.randn(b_size, latent_vec_size, 1, 1, device=device)
+            # Generate fake image batch with generator
+            fake = g_net(noise)
+            # Classify all fake batch with discriminator
+            fake_output = d_net(fake.detach()).view(-1)
+            fake_label = torch.ones((b_size,), dtype=torch.float, device=device)
+            # Calculate the gradients for this batch, accumulated (summed) with previous gradients
+            errD_fake = criterion(fake_output, fake_label)
+            errD_fake.backward()
+            # Update discriminator
+            optimizerD.step()
 
             # perform a generator iteration every 'discriminator_iterations' steps of the discriminator
             # Update generator
             g_net.zero_grad()
             # perform forward pass of fake batch through discriminator
             fake_output = d_net(fake).view(-1)
+            real_label = torch.ones((b_size,), dtype=torch.float, device=device)
             # Calculate G's loss based on this output
-            errG = g_net_loss(fake_output)
+            errG = criterion(fake_output, real_label)
             errG.backward()
             # Update generator weights
             optimizerG.step()
@@ -192,9 +194,9 @@ def train(g_net: nn.Module, d_net: nn.Module, d_net_loss, g_net_loss):
             # Output training stats
             if i % 50 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
-                      % (epoch, num_epochs, i, len(dataloader), errD.item(), errG.item()))
+                      % (epoch+1, num_epochs, i, len(dataloader), (errD_real.item() + errD_fake.item())/2, errG.item()))
             G_losses.append(errG.item())
-            D_losses.append(errD.item())  # Save Losses for plotting later
+            D_losses.append((errD_real.item() + errD_fake.item()) / 2)  # Save Losses for plotting later
 
             # Check how the generator is doing by saving G's output on fixed_noise
             if (iters % 500 == 0) or i == len(dataloader) - 1:
@@ -232,7 +234,7 @@ def test_generator(path, num_tests):
 
 
 if __name__ == '__main__':
-    test_generator('./g_net', 20)
+    # test_generator('./g_net', 20)
     dataloader = generate_mnist_data_set()
 
     generator = MNISTGen().to(device)
@@ -241,4 +243,4 @@ if __name__ == '__main__':
     generator.apply(weights_init), discriminator.apply(weights_init)
 
     # Create batch of latent vectors to check the generator's progress
-    train(generator, discriminator, d_loss_least_squares, gen_loss_least_squares)
+    train(generator, discriminator)

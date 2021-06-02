@@ -71,23 +71,23 @@ class AutoEncoderACELEB(nn.Module):
         )
         self.decoder = nn.Sequential(
             # input is latent_vec_size x 1 x 1
-            nn.ConvTranspose2d(latent_vec_size, num_channels * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(latent_vec_size, num_channels * 8, kernel_size=4, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(num_channels * 8),
             nn.ReLU(True),
             # size (num_channels*8) x 4 x 4
-            nn.ConvTranspose2d(num_channels * 8, num_channels * 4, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(num_channels * 8, num_channels * 4, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(num_channels * 4),
             nn.ReLU(True),
             # size (num_channels*4) x 8 x 8
-            nn.ConvTranspose2d(num_channels * 4, num_channels * 2, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(num_channels * 4, num_channels * 2, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(num_channels * 2),
             nn.ReLU(True),
             # size (num_channels*2) x 16 x 16
-            nn.ConvTranspose2d(num_channels * 2, num_channels, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(num_channels * 2, num_channels, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(num_channels),
             nn.ReLU(True),
             # size (num_channels) x 32 x 32
-            nn.ConvTranspose2d(num_channels, input_channels, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(num_channels, input_channels, kernel_size=4, stride=2, padding=1, bias=False),
             nn.Tanh()  # size (nc) x 64 x 64
         )
     

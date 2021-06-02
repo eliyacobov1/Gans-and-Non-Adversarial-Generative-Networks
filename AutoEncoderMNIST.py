@@ -7,8 +7,6 @@ import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 from GAN import weights_init, transform
 
-image_size = 28
-
 
 def generate_mnist_data_set():
     train_set = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
@@ -22,7 +20,7 @@ batch_size = 128
 # Size of z latent vector (i.e. size of generator input)
 latent_vec_size = 30  # TODO
 # Size of feature maps in generator and discriminator
-num_channels = 32
+num_channels = 16
 # number of input channels
 input_channels = 1
 # Number of training epochs
@@ -31,6 +29,10 @@ num_epochs = 10
 lr = 0.0002
 # Beta1 hyper-param for Adam optimizers
 beta1 = 0.5
+# spatial size of the input image
+image_size = 28
+# number of images to test the generator after every 500 iterations
+num_test_samples=24
 
 
 def tensor_to_plt_im(im: torch.Tensor):
@@ -42,41 +44,39 @@ class AutoEncoderMNIST(nn.Module):
         super(AutoEncoderMNIST, self).__init__()
         self.encoder = nn.Sequential(
             # input size is 3 x 28 x 28
-            nn.Conv2d(input_channels, 4, kernel_size=5),
+            nn.Conv2d(input_channels, num_channels * 2, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(num_channels * 2),
             nn.LeakyReLU(0.2, inplace=True),
-            # 4 x 24 x 24
-            nn.Conv2d(4, 8, kernel_size=5),
-            nn.BatchNorm2d(num_channels * 8),
+            # size (num_channels*2) x 14 x 14
+            nn.Conv2d(num_channels * 2, num_channels * 4, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(num_channels * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            # 8 x 20 x 20 = 3200
+            # size (num_channels*4) x 7 x 7
             nn.Flatten(),
-            nn.Linear(3200, latent_vec_size),
+            # size (396,)
+            nn.Linear(num_channels * 4 * 7 * 7, 396),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(396, latent_vec_size),  # output size (latent_vec_size,)
         )
         self.decoder = nn.Sequential(
-            # input is latent_vec_size x 1 x 1
-            nn.ConvTranspose2d(latent_vec_size, num_channels * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(num_channels * 8),
+            # size (latent_vec_size,)
+            nn.Linear(latent_vec_size, 396),
             nn.ReLU(True),
-            # size (num_channels*8) x 4 x 4
-            nn.ConvTranspose2d(num_channels * 8, num_channels * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(num_channels * 4),
+            # size (396,)
+            nn.Linear(396, num_channels * 4 * 7 * 7),
             nn.ReLU(True),
-            # size (num_channels*4) x 8 x 8
-            nn.ConvTranspose2d(num_channels * 4, num_channels * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(num_channels * 2),
+            nn.Unflatten(1, (num_channels*4, 7, 7)),
+            # size (num_channels*4) x 7 x 7
+            nn.ConvTranspose2d(num_channels * 4, num_channels * 2, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(num_channels*2),
             nn.ReLU(True),
-            # size (num_channels*2) x 16 x 16
-            nn.ConvTranspose2d(num_channels * 2, num_channels, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(num_channels),
-            nn.ReLU(True),
-            # size (num_channels) x 32 x 32
-            nn.ConvTranspose2d(num_channels, input_channels, 4, 2, 1, bias=False),
-            nn.Tanh()  # size (nc) x 64 x 64
+            # size (num_channels) x 14 x 14
+            nn.ConvTranspose2d(num_channels * 2, input_channels, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Tanh(),  # the final output image size. (num_input_channels) x 28 x 28
         )
 
     def forward(self, x):
-        return self.decoder(self.encoder(x.view()).view(-1, latent_vec_size, 1, 1))
+        return self.decoder(self.encoder(x))
 
 
 def calc_kurtosis(t, mean, std):
@@ -113,12 +113,12 @@ def train(net: AutoEncoderMNIST, dataloader, criterion=nn.MSELoss()):
 
             # Output training stats
             if i % 50 == 0:
-                print('[%d/%d][%d/%d]\tLoss %.4f\t' % (epoch, num_epochs, i, len(dataloader), err.item()))
+                print('[%d/%d][%d/%d]\tLoss %.4f\t' % (epoch+1, num_epochs, i, len(dataloader), err.item()))
 
             # Check how the generator portion of the auto-encoder is doing by saving it's output on fixed_noise
-            if (i % 500 == 0) or i == len(dataloader) - 1:
+            if i % 500 == 0:
                 with torch.no_grad():
-                    fixed_noise = torch.randn(2 * batch_size, latent_vec_size, 1, 1, device=device)
+                    fixed_noise = torch.randn(num_test_samples, latent_vec_size, device=device)
                     fake = net.decoder(fixed_noise).detach().cpu()
                 plt.imshow(tensor_to_plt_im(vutils.make_grid(fake)))
                 plt.show()
@@ -135,11 +135,11 @@ def test_AE_novel_samples(path, num_tests):
     AE.eval()
     img_lst = []
     for i in range(num_tests):
-        noise = torch.randn(2 * batch_size, latent_vec_size, 1, 1, device=device)
+        noise = torch.randn(2 * batch_size, latent_vec_size, device=device)
         with torch.no_grad():
             im = AE.decoder(noise).detach().cpu()
         img_lst.append(im)
-        plt.imshow(tensor_to_plt_im(img_lst[-1][-1]))
+        plt.imshow(tensor_to_plt_im(img_lst[-1][-1]), cmap='gray')
         plt.show()
         time.sleep(2)
 

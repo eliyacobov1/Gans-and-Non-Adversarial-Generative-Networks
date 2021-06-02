@@ -33,7 +33,7 @@
       <recent name="C:\Users\Eli\Desktop\university\Nueral Networks\ex2" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.AutoEncoderACELEB (1)">
+  <component name="RunManager" selected="Python.AutoEncoderMNIST">
     <configuration name="AutoEncoderACELEB (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ex2" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -56,7 +56,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="AutoEncoderACELEB" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="AutoEncoderMNIST" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ex2" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -69,7 +69,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="C:\Users\Eli\Desktop\university\Nueral Networks\GAN and Auto-Encoder\AutoEncoderACELEB.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/AutoEncoderMNIST.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -171,16 +171,16 @@
       <item itemvalue="Python.GAN" />
       <item itemvalue="Python.ModelInversion" />
       <item itemvalue="Python.main" />
-      <item itemvalue="Python.AutoEncoderACELEB" />
       <item itemvalue="Python.AutoEncoderACELEB (1)" />
+      <item itemvalue="Python.AutoEncoderMNIST" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.AutoEncoderMNIST" />
         <item itemvalue="Python.AutoEncoderACELEB (1)" />
         <item itemvalue="Python.GAN" />
         <item itemvalue="Python.main" />
         <item itemvalue="Python.ModelInversion" />
-        <item itemvalue="Python.AutoEncoderACELEB" />
       </list>
     </recent_temporary>
   </component>
@@ -209,7 +209,7 @@
       <workItem from="1622478274776" duration="663000" />
       <workItem from="1622542171737" duration="1862000" />
       <workItem from="1622548004806" duration="11715000" />
-      <workItem from="1622609650497" duration="12584000" />
+      <workItem from="1622609650497" duration="16396000" />
     </task>
     <servers />
   </component>
@@ -233,6 +233,7 @@
     <SUITE FILE_PATH="coverage/GAN_py$AutoEncoderACELEB__1_.coverage" NAME="AutoEncoderACELEB (1) Coverage Results" MODIFIED="1622630268249" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ex2$DCGAN_MNIST_NS__1_.coverage" NAME="DCGAN_MNIST_NS (1) Coverage Results" MODIFIED="1621686085974" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/Downloads" />
     <SUITE FILE_PATH="coverage/GAN_py$main.coverage" NAME="main Coverage Results" MODIFIED="1622554337873" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/GAN_py$AutoEncoderMNIST.coverage" NAME="AutoEncoderMNIST Coverage Results" MODIFIED="1622640549062" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ex2$main.coverage" NAME="main Coverage Results" MODIFIED="1622401380132" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ex2$GAN.coverage" NAME="GAN Coverage Results" MODIFIED="1622379662544" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/ex2$ModelInversion.coverage" NAME="ModelInversion Coverage Results" MODIFIED="1622403498374" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

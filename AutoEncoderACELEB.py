@@ -6,7 +6,6 @@ import torch.optim as optim
 import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
-from GAN import weights_init, transform
 
 celeba_path = './celeba'
 image_size = 64
@@ -26,11 +25,9 @@ def generate_celeba64_data_set():
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 
 # Batch size during training
-batch_size = 32
-# Convention for real and fake labels during training
-real_label, fake_label = 1., 0.
+batch_size = 128
 # Size of z latent vector (i.e. size of generator input)
-latent_vec_size = 64
+latent_vec_size = 100
 # Size of feature maps in generator and discriminator
 num_channels = 32
 # number of input channels
@@ -41,8 +38,8 @@ num_epochs = 10
 lr = 0.0002
 # Beta1 hyper-param for Adam optimizers
 beta1 = 0.5
-# the number of steps applied to the discriminator per a single iteration of the generator
-discriminator_iterations = 10
+# number of images to test the generator after every 500 iterations
+num_test_samples=24
 
 
 def tensor_to_plt_im(im: torch.Tensor):
@@ -106,8 +103,16 @@ def calc_kurtosis(t, mean, std):
     return torch.mean(((t - mean) / std) ** 4)
 
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+
 def train(net: AutoEncoderACELEB, dataloader, criterion=nn.MSELoss()):
-    losses, gen_lst, iters = [], [], 0
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=(beta1, 0.999))
     print("Starting Training Loop...")
     # For each epoch
@@ -134,23 +139,16 @@ def train(net: AutoEncoderACELEB, dataloader, criterion=nn.MSELoss()):
             
             # Output training stats
             if i % 50 == 0:
-                print('[%d/%d][%d/%d]\tLoss %.4f\t' % (epoch, num_epochs, i, len(dataloader), err.item()))
-            losses.append(err.item())
+                print('[%d/%d][%d/%d]\tLoss %.4f\t' % (epoch+1, num_epochs, i, len(dataloader), err.item()))
             
             # Check how the generator portion of the auto-encoder is doing by saving it's output on fixed_noise
-            if (iters % 500 == 0) or i == len(dataloader) - 1:
+            if (i % 500 == 0) or i == len(dataloader) - 1:
                 with torch.no_grad():
-                    fixed_noise = torch.randn(2 * batch_size, latent_vec_size, 1, 1, device=device)
+                    fixed_noise = torch.randn(num_test_samples, latent_vec_size, 1, 1, device=device)
                     fake = net.decoder(fixed_noise).detach().cpu()
-                gen_lst.append(vutils.make_grid(fake))
-                plt.imshow(tensor_to_plt_im(gen_lst[-1]))
+                plt.imshow(tensor_to_plt_im(vutils.make_grid(fake)))
                 plt.show()
-            iters += 1
-    torch.save(net.state_dict(), './auto_encoder')
-    textfile = open("losses.txt", "w")  # write losses to text file
-    for element in losses:
-        textfile. write(str(element) + "\n")
-    textfile. close()
+    torch.save(net.state_dict(), './auto_encoder_ACELEB')
 
 
 def test_AE_novel_samples(path, num_tests):
@@ -173,13 +171,10 @@ def test_AE_novel_samples(path, num_tests):
 
 
 if __name__ == '__main__':
-    test_AE_novel_samples('./auto_encoder', 10)
+    # test_AE_novel_samples('./auto_encoder', 10)
     AE = AutoEncoderACELEB().to(device)
     dl = generate_celeba64_data_set()
     AE.apply(weights_init)
-    vec = torch.rand(7, 3, 64, 64)
-    output = AE(vec)
-    z = 0
     
     # Create a batch of latent vectors to check the generator's progress
     train(AE, dataloader=dl)

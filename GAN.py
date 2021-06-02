@@ -19,21 +19,23 @@ def generate_mnist_data_set():
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 
 # Batch size during training
-batch_size = 32
+batch_size = 128
 # Size of z latent vector (i.e. size of generator input)
-latent_vec_size = 10
+latent_vec_size = 64
 # Size of feature maps in generator and discriminator
 num_channels = 32
 # number of input channels
 input_channels = 1
 # Number of training epochs
-num_epochs = 5
+num_epochs = 15
 # Learning rate for optimizers
 lr = 0.0002
 # Beta1 hyper-param for Adam optimizers
 beta1 = 0.5
 # the number of steps applied to the discriminator per a single iteration of the generator
 discriminator_iterations = 1
+# number of images to test the generator after every 500 iterations
+num_test_samples=24
 
 
 def tensor_to_plt_im(im: torch.Tensor):
@@ -96,11 +98,7 @@ class MNISTGen(nn.Module):
             nn.ReLU(True),
             # size (num_channels) x 14 x 14
             nn.ConvTranspose2d(num_channels, input_channels, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(input_channels),
             nn.Tanh()  # the final output image size. (num_input_channels) x 28 x 28
-        )
-        self.linear = nn.Sequential(
-            nn.Linear(latent_vec_size, (num_channels * 8) * 2 * 2),
         )
 
     def forward(self, x):
@@ -108,7 +106,7 @@ class MNISTGen(nn.Module):
 
 
 class MNISTDisc(nn.Module):
-    def __init__(self, output_dim):
+    def __init__(self):
         super(MNISTDisc, self).__init__()
         self.conv = nn.Sequential(
             # input size is (num_input_channels) x 28 x 28
@@ -129,9 +127,6 @@ class MNISTDisc(nn.Module):
             nn.Conv2d(num_channels * 8, 1, kernel_size=2, bias=False),
             nn.Sigmoid()  # size (1 x 1 x 1)
         )
-        self.linear = nn.Sequential(
-            nn.Linear((num_channels * 8) * 2 * 2, output_dim),
-        )
 
     def forward(self, x):
         return self.conv(x).view(-1, 1)
@@ -147,7 +142,6 @@ def weights_init(m):
 
 
 def train(g_net: nn.Module, d_net: nn.Module, criterion=nn.BCELoss()):
-    G_losses, D_losses, iters, gen_lst = [], [], 0, []
     optimizerD = optim.Adam(d_net.parameters(), lr=lr, betas=(beta1, 0.999))
     optimizerG = optim.Adam(g_net.parameters(), lr=lr, betas=(beta1, 0.999))
     print("Starting Training Loop...")
@@ -156,7 +150,7 @@ def train(g_net: nn.Module, d_net: nn.Module, criterion=nn.BCELoss()):
         # For each batch in the dataloader
         for i, data in enumerate(dataloader, 0):
             # train discriminator
-            d_net.zero_grad()
+            optimizerD.zero_grad()
             batch = data[0].to(device)
             b_size = batch.size(0)
             # Forward pass real batch through D
@@ -172,7 +166,7 @@ def train(g_net: nn.Module, d_net: nn.Module, criterion=nn.BCELoss()):
             fake = g_net(noise)
             # Classify all fake batch with discriminator
             fake_output = d_net(fake.detach()).view(-1)
-            fake_label = torch.ones((b_size,), dtype=torch.float, device=device)
+            fake_label = torch.zeros((b_size,), dtype=torch.float, device=device)
             # Calculate the gradients for this batch, accumulated (summed) with previous gradients
             errD_fake = criterion(fake_output, fake_label)
             errD_fake.backward()
@@ -181,9 +175,12 @@ def train(g_net: nn.Module, d_net: nn.Module, criterion=nn.BCELoss()):
 
             # perform a generator iteration every 'discriminator_iterations' steps of the discriminator
             # Update generator
-            g_net.zero_grad()
-            # perform forward pass of fake batch through discriminator
-            fake_output = d_net(fake).view(-1)
+            optimizerG.zero_grad()
+            # Generate fake image batch with generator
+            noise = torch.randn(b_size, latent_vec_size, 1, 1, device=device)
+            fake = g_net(noise)
+            # Classify all fake batch with discriminator
+            fake_output = d_net(fake.detach()).view(-1)
             real_label = torch.ones((b_size,), dtype=torch.float, device=device)
             # Calculate G's loss based on this output
             errG = criterion(fake_output, real_label)
@@ -192,23 +189,19 @@ def train(g_net: nn.Module, d_net: nn.Module, criterion=nn.BCELoss()):
             optimizerG.step()
 
             # Output training stats
-            if i % 50 == 0:
+            if i % 50 == 0 or i == len(dataloader) - 1:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f'
                       % (epoch+1, num_epochs, i, len(dataloader), (errD_real.item() + errD_fake.item())/2, errG.item()))
-            G_losses.append(errG.item())
-            D_losses.append((errD_real.item() + errD_fake.item()) / 2)  # Save Losses for plotting later
-
-            # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 500 == 0) or i == len(dataloader) - 1:
+            
+            if i % 400 == 0:
                 with torch.no_grad():
-                    fixed_noise = torch.randn(2 * batch_size, latent_vec_size, 1, 1, device=device)
-                    fake = g_net(fixed_noise).detach().cpu()
-                gen_lst.append(vutils.make_grid(fake))
-                plt.imshow(tensor_to_plt_im(gen_lst[-1]))
+                    # Check how the generator is doing by saving G's output on fixed_noise
+                    test_noise = torch.randn(num_test_samples, latent_vec_size, 1, 1).cpu().detach()
+                    fake = g_net(test_noise).detach().cpu()
+                plt.imshow(tensor_to_plt_im(vutils.make_grid(fake)))
                 plt.show()
-            iters += 1
-    torch.save(d_net.state_dict(), './d_net1')
-    torch.save(g_net.state_dict(), './g_net1')
+
+    torch.save(g_net.state_dict(), './g_net2')
 
 
 def test_generator(path, num_tests):
@@ -234,11 +227,11 @@ def test_generator(path, num_tests):
 
 
 if __name__ == '__main__':
-    # test_generator('./g_net', 20)
+    # test_generator('./g_net1', 20)
     dataloader = generate_mnist_data_set()
 
     generator = MNISTGen().to(device)
-    discriminator = MNISTDisc(output_dim=1).to(device)
+    discriminator = MNISTDisc().to(device)
 
     generator.apply(weights_init), discriminator.apply(weights_init)
 

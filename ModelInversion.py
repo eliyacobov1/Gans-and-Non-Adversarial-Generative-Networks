@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import numpy as np
-from AutoEncoder import AutoEncoderACELEB, generate_celeba64_data_set
+from AutoEncoderACELEB import AutoEncoderACELEB, generate_celeba64_data_set
 from GAN import MNISTGen, generate_mnist_data_set, tensor_to_plt_im
 
 AE_PATH = './auto_encoder'
